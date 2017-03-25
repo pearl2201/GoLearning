@@ -1,17 +1,18 @@
 package db
 
 import (
-	"Learn/Web/types"
+	"Learn/web/types"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
-	"os"
+
+	"time"
 )
 
 var database Database
 var taskStatus map[string]int
-var err Error
+var err error
 
 type Database struct {
 	db *sql.DB
@@ -19,8 +20,8 @@ type Database struct {
 
 // Begin a transaction
 
-func (db Database) begin() (tx *sql.Tx) {
-	tx, err := db.db.Begin()
+func (db1 Database) begin() (tx *sql.Tx) {
+	tx, err := db1.db.Begin()
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -29,8 +30,8 @@ func (db Database) begin() (tx *sql.Tx) {
 
 }
 
-func (db Database) prepare(q string) (stmt *sql.Stmt) {
-	stmt, err := db.db.prepare(q)
+func (db1 Database) prepare(q string) (stmt *sql.Stmt) {
+	stmt, err := db1.db.Prepare(q)
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -38,13 +39,13 @@ func (db Database) prepare(q string) (stmt *sql.Stmt) {
 	return stmt
 }
 
-func (db Database) query(q string, args ...interface{}) (row *sql.Rows) {
+func (db Database) query(q string, args ...interface{}) (*sql.Rows, error) {
 	rows, err := db.db.Query(q, args...)
 	if err != nil {
 		log.Println(err)
-		return nil
+		return nil, err
 	}
-	return rows
+	return rows, nil
 }
 
 func init() {
@@ -55,16 +56,46 @@ func init() {
 	}
 }
 
-func close() {
+func Close() {
 	database.db.Close()
 }
 
-func getTasks(username, status, category string) (types.Context, error) {
+/*func getTasks(username, status, category string) (types.Context, error) {
 	var tasks []Task
 	var navigation string
 	var search string
 	var message string
 	var referer string
 	var csrf string
-	var category []types.CategoryCount
+	//	var category []types.CategoryCount
+
+}
+*/
+
+func GetTasks() types.Context {
+	var task []types.Task
+	var context types.Context
+	var TaskID int
+	var TaskTitle string
+	var TaskContent string
+	var TaskCreated time.Time
+	var getTaskSql string
+	getTaskSql = "select id, title, content, created_date from task;"
+	rows, err := database.query(getTaskSql)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&TaskID, &TaskTitle, &TaskContent, &TaskCreated)
+		if err != nil {
+			fmt.Printf("%s", err.Error())
+		}
+		TaskCreated = TaskCreated.Local()
+		a := types.Task{Id: TaskID, Title: TaskTitle, Content: TaskContent, Created: TaskCreated.String()}
+		task = append(task, a)
+	}
+	context = types.Context{Tasks: task}
+	return context
+
 }

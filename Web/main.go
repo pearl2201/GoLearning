@@ -2,7 +2,7 @@ package main
 
 import (
 	"Learn/web/db"
-	"db"
+
 	"log"
 	"net/http"
 )
@@ -20,7 +20,8 @@ func ShowCompleteTaskFunc(w http.ResponseWriter, r *http.Request) {
 func ShowAllTaskFunc(w http.ResponseWriter, r *http.Request) {
 	var message string
 	if r.Method == "GET" {
-		message = "all pending task get"
+		context := db.GetTasks()
+		message = context.Tasks[0].Title
 	} else {
 		message = "all pending task post"
 	}
