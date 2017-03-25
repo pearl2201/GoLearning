@@ -4,8 +4,9 @@ import (
 	"Learn/web/types"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
+
+	_ "github.com/go-sql-driver/mysql"
 
 	"time"
 )
@@ -49,7 +50,7 @@ func (db Database) query(q string, args ...interface{}) (*sql.Rows, error) {
 }
 
 func init() {
-	database.db, err = sql.Open("mysql", "pearl:hoanghien@/Pearl")
+	database.db, err = sql.Open("mysql", "pearl:hoanghien@/Pearl?parseTime=true")
 	taskStatus = map[string]int{"COMPLETE": 1, "PENDING": 2, "DELETED": 3}
 	if err != nil {
 		log.Fatal(err)
@@ -72,6 +73,7 @@ func Close() {
 }
 */
 
+//GetTasks get all tasks from database
 func GetTasks() types.Context {
 	var task []types.Task
 	var context types.Context
@@ -92,10 +94,27 @@ func GetTasks() types.Context {
 			fmt.Printf("%s", err.Error())
 		}
 		TaskCreated = TaskCreated.Local()
-		a := types.Task{Id: TaskID, Title: TaskTitle, Content: TaskContent, Created: TaskCreated.String()}
+		a := types.Task{Id: TaskID, Title: TaskTitle, Content: TaskContent, Created: TaskCreated.Format(time.UnixDate)[0:20]}
 		task = append(task, a)
 	}
 	context = types.Context{Tasks: task}
 	return context
 
+}
+
+//AddTask add task to database
+func AddTask(title, content string) error {
+	var err error
+	query := "insert into task(title, content,created_date, last_modified_at,cat_id,task_status_id,user_id) values(?,?,now(), now(),?,?,?)"
+	restoreSQL := database.prepare(query)
+	tx := database.begin()
+	_, err = tx.Stmt(restoreSQL).Exec(title, content, 1, 1, 1)
+	if err != nil {
+		fmt.Println(err)
+		tx.Rollback()
+	} else {
+		log.Println("insert successful")
+		tx.Commit()
+	}
+	return err
 }

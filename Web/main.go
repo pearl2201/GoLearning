@@ -8,12 +8,12 @@ import (
 )
 
 func CompleteTaskFunc(w http.ResponseWriter, r *http.Request) {
-	var message string = "complete task post"
+	var message = "complete task post"
 	w.Write([]byte(message))
 }
 
 func ShowCompleteTaskFunc(w http.ResponseWriter, r *http.Request) {
-	var message string = "show complete task get"
+	var message = "show complete task get"
 	w.Write([]byte(message))
 }
 
@@ -38,15 +38,15 @@ func ShowTrashTaskFunc(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(message))
 }
 
+//AddTaskFunc is used to handle the addition of new task, "/add" URL
 func AddTaskFunc(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func AddTask(title, content, category string, taskPriority int, username string, hidden int) error {
-	log.Println("Add task: start function")
-	var err error
-
-	return err
+	title := "random title"
+	content := "random content"
+	truth := db.AddTask(title, content)
+	if truth != nil {
+		log.Fatal("Error adding task")
+	}
+	w.Write([]byte("Adds task"))
 }
 
 func main() {
