@@ -1,7 +1,8 @@
 package db
 
 import (
-	"Learn/web/types"
+	"Learn/Web/types"
+
 	"database/sql"
 	"fmt"
 	"log"
@@ -104,9 +105,9 @@ func GetTasks() types.Context {
 }
 
 //AddTask add task to database
-func AddTask(title, content string) error {
+func AddTask(title, content string, priority int) error {
 	var err error
-	query := "insert into task(title, content,created_date, last_modified_at,cat_id,task_status_id,user_id) values(?,?,now(), now(),?,?,?)"
+	query := "insert into task(title, content,created_date, last_modified_at,cat_id,task_status_id,user_id,priority) values(?,?,now(), now(),?,?,?)"
 	restoreSQL := database.prepare(query)
 	tx := database.begin()
 	_, err = tx.Stmt(restoreSQL).Exec(title, content, 1, 1, 1)

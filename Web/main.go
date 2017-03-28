@@ -2,12 +2,13 @@ package main
 
 import (
 	"Learn/web/db"
+	"Learn/web/views"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"strconv"
 	"time"
 )
 
@@ -30,36 +31,12 @@ func ShowAllTaskFunc(w http.ResponseWriter, r *http.Request) {
 		expiration := time.Now().Add(365 * 24 * time.Hour)
 		cookie := http.Cookie{Name: "csrftoken", Value: "abcd", Expires: expiration}
 		http.SetCookie(w, &cookie)
-		templatesDir := "./templates/"
-		var allFiles []string
-		files, err := ioutil.ReadDir(templatesDir)
-		if err != nil {
-			log.Println(err)
-			os.Exit(1) // No point in running app if templates aren't read
-		}
-		for _, file := range files {
-			filename := file.Name()
-			if strings.HasSuffix(filename, ".html") {
-				allFiles = append(allFiles, templatesDir+filename)
-			}
-		}
-
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		templates, err := template.ParseFiles(allFiles...)
-		if err != nil {
-			log.Println(err)
-			os.Exit(1)
-		}
-		tmpl := templates.Lookup("home.html")
-
-		tmpl.Execute(w, context)
+		views.HomeTemplate.Execute(w, context)
 	} else {
 		message = "all pending task post"
+		w.Write([]byte(message))
 	}
-	w.Write([]byte(message))
+
 }
 
 func DeleteAllTaskFunc(w http.ResponseWriter, r *http.Request) {
@@ -74,20 +51,68 @@ func ShowTrashTaskFunc(w http.ResponseWriter, r *http.Request) {
 
 //AddTaskFunc is used to handle the addition of new task, "/add" URL
 func AddTaskFunc(w http.ResponseWriter, r *http.Request) {
-	title := "random title"
-	content := "random content"
-	truth := db.AddTask(title, content)
+	if r.Method == "GET" {
+		r.ParseForm()
+		file, handler, err := r.FormFile("uploadfile")
+		if err != nil {
+			log.Println(err)
+		}
+		taskPriority, priorityErr := strconv.Atoi(r.FormValue("priority"))
+		if priorityErr != nil {
+			log.Println("Unable to convert priority to integer")
 
-	if truth != nil {
-		log.Fatal("Error adding task")
+		}
+		priorityList := []int{1, 2, 3}
+		for _, priority := range priorityList {
+			if taskPriority != priority {
+				log.Println("incorrect priority sent")
+				taskPriority = 1
+			}
+		}
+		title := template.HTMLEscapeString(r.Form.Get("title"))
+		content := template.HTMLEscapeString(r.Form.Get("content"))
+		formToken := template.HTMLEscapeString(r.Form.Get("CSRFToken"))
+		truth := db.AddTask(title, content)
+		cookie, _ := r.Cookie("csrftoken")
+		if formToken == cookie.Value {
+			if handler != nil {
+				r.ParseMultipartForm(32 << 20)
+				defer file.Close()
+				f, err := os.OpenFile("./files/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				defer f.Close()
+				io.Copy(f, file)
+				filelink := "<br> <a href=/files/" + handler.Filename + ">" + handler.Filename + "</a>"
+				content = content + filelink
+			}
+			truth := db.AddTask(title, content, taskPriority)
+			if truth != nil {
+				message = "Error adding task"
+				log.Fatal("Error adding task to db")
+			} else {
+				message = "Task added"
+				log.Println("added task to db")
+			}
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+			log.Fatal("csrf mismatch")
+		}
+
+	} else {
+		message = "Method not allowed"
+		http.Redirect(w, r, "/", http.StatusFound)
 	}
+
 	w.Write([]byte("Adds task"))
 }
 
 func main() {
-
+	views.PopulateTemplates()
 	PORT := "127.0.0.1:8080"
-	log.Println("Running server on" + PORT)
+	log.Println("Running server on: " + PORT)
 	http.HandleFunc("/", ShowAllTaskFunc)
 	http.HandleFunc("/add/", AddTaskFunc)
 	http.HandleFunc("/complete/", CompleteTaskFunc)
