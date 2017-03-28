@@ -37,6 +37,7 @@ func (db1 Database) prepare(q string) (stmt *sql.Stmt) {
 		log.Println(err)
 		return nil
 	}
+
 	return stmt
 }
 
