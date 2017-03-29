@@ -26,7 +26,10 @@ func ShowAllTaskFunc(w http.ResponseWriter, r *http.Request) {
 	var message string
 	if r.Method == "GET" {
 		context := db.GetTasks()
-		message = context.Tasks[0].Title
+		for _, v := range context.Tasks {
+			message += v.Title
+		}
+
 		context.CSRF = "abcd"
 		expiration := time.Now().Add(365 * 24 * time.Hour)
 		cookie := http.Cookie{Name: "csrftoken", Value: "abcd", Expires: expiration}
@@ -34,8 +37,9 @@ func ShowAllTaskFunc(w http.ResponseWriter, r *http.Request) {
 		views.HomeTemplate.Execute(w, context)
 	} else {
 		message = "all pending task post"
-		w.Write([]byte(message))
+
 	}
+	w.Write([]byte(message))
 
 }
 
@@ -51,6 +55,8 @@ func ShowTrashTaskFunc(w http.ResponseWriter, r *http.Request) {
 
 //AddTaskFunc is used to handle the addition of new task, "/add" URL
 func AddTaskFunc(w http.ResponseWriter, r *http.Request) {
+
+	var message string
 	if r.Method == "GET" {
 		r.ParseForm()
 		file, handler, err := r.FormFile("uploadfile")
@@ -72,7 +78,7 @@ func AddTaskFunc(w http.ResponseWriter, r *http.Request) {
 		title := template.HTMLEscapeString(r.Form.Get("title"))
 		content := template.HTMLEscapeString(r.Form.Get("content"))
 		formToken := template.HTMLEscapeString(r.Form.Get("CSRFToken"))
-		truth := db.AddTask(title, content)
+
 		cookie, _ := r.Cookie("csrftoken")
 		if formToken == cookie.Value {
 			if handler != nil {
@@ -106,7 +112,7 @@ func AddTaskFunc(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
-	w.Write([]byte("Adds task"))
+	w.Write([]byte(message))
 }
 
 func main() {
