@@ -74,6 +74,9 @@ func handleConnection(conn net.Conn) {
 }
 
 type Packet struct {
+	length      uint8
+	typeMessage uint8
+
 	data   []byte
 	offset int
 }
