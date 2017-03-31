@@ -33,17 +33,15 @@ func main() {
 		}
 	}()
 
-	var i int
 	for {
 		select {
 		case p := <-messages:
 			{
-				if p.GetTypeMessage() == Protocol.PK_LOGIN {
+				if p.PID == Protocol.PK_LOGIN {
 					parser := Protocol.PacketParser{}
 					parser.DecodePacket(&p)
 					msg := parser.ReadString()
-					i++
-					fmt.Printf("message %d: "+msg+"\n", i)
+					fmt.Println(msg)
 
 				}
 			}
@@ -73,8 +71,8 @@ func handleConnection(conn net.Conn, messages chan Protocol.Packet) {
 
 		length := byteToInt(b)
 
-		bType := make([]byte, LENGTH_TYPE_PACKET)
-		_, err = conn.Read(bType[0:])
+		b = make([]byte, LENGTH_TYPE_PACKET)
+		_, err = conn.Read(b[0:])
 		if err != nil {
 			if err == io.EOF {
 				fmt.Println("eof, may be client close")
@@ -85,7 +83,7 @@ func handleConnection(conn net.Conn, messages chan Protocol.Packet) {
 			}
 		}
 
-		typeMessage := byteToInt(bType)
+		pid := byteToInt(b)
 
 		buf := make([]byte, length)
 		reqLen := 0
@@ -104,9 +102,7 @@ func handleConnection(conn net.Conn, messages chan Protocol.Packet) {
 
 			}
 		}
-		p := Protocol.Packet{}
-		p.SetData(buf)
-		p.SetTypeMessage(typeMessage)
+		p := Protocol.Packet{Data: buf, PID: pid}
 
 		messages <- p
 	}
