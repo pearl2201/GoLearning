@@ -7,41 +7,31 @@ type PacketParser struct {
 	offset int
 }
 
-func (parser *PacketParser) Decodef(data []byte) {
-	// read length
-	bLength := data[:4]
-	bPacketType := data[4:8]
-	bData := data[8:]
-	parser.offset = 0
-	parser.packet = &(Packet{length: int(int(bLength[0]) + int(bLength[1])<<8 + int(bLength[2])<<16 + int(bLength[3])<<24), typeMessage: int(int(bPacketType[0]) + int(bPacketType[1])<<8 + int(bPacketType[2])<<16 + int(bPacketType[3])<<24), data: bData})
-}
-
-func (parser *PacketParser) Decode(data []byte, length int) {
+func (parser *PacketParser) Decode(data []byte) {
 	// read length
 	bPacketType := data[:4]
-	bData := data[4:]
+	bData := data[0:4]
 	parser.offset = 0
-	parser.packet = &(Packet{length: length, typeMessage: int(int(bPacketType[0]) + int(bPacketType[1])<<8 + int(bPacketType[2])<<16 + int(bPacketType[3])<<24), data: bData})
+	parser.packet = &(Packet{typeMessage: int(int(bPacketType[0]) + int(bPacketType[1])<<8 + int(bPacketType[2])<<16 + int(bPacketType[3])<<24), data: bData})
 }
 
 func (parser *PacketParser) Encode() []byte {
 	var msg []byte
-	v := len(parser.packet.data)
-	g := parser.packet.typeMessage
-	b := make([]byte, 8)
+	v := parser.packet.typeMessage
+	b := make([]byte, 4)
 	b[0] = byte(v) & 0xff
 	b[1] = byte(v>>8) & 0xff
 	b[2] = byte(v>>8) & 0xff
 	b[3] = byte(v>>24) & 0xff
-	b[0] = byte(g) & 0xff
-	b[1] = byte(g>>8) & 0xff
-	b[2] = byte(g>>8) & 0xff
-	b[3] = byte(g>>24) & 0xff
 	msg = append(msg, b...)
 	msg = append(msg, parser.packet.data...)
 	return msg
 }
 
+func (parser *PacketParser) Prepare(typeMessage int) {
+	parser.packet = &(Packet{typeMessage: typeMessage, data: make([]byte, 0)})
+	parser.offset = 0
+}
 func (parser *PacketParser) ReadByte() byte {
 	parser.offset++
 	return parser.packet.data[parser.offset]
