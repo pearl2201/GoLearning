@@ -15,14 +15,25 @@ func (parser *PacketParser) Decode(data []byte) {
 	parser.packet = &(Packet{typeMessage: int(int(bPacketType[0]) + int(bPacketType[1])<<8 + int(bPacketType[2])<<16 + int(bPacketType[3])<<24), data: bData})
 }
 
+func (parser *PacketParser) DecodePacket(packet *Packet) {
+	// read length
+	parser.offset = 0
+	parser.packet = packet
+}
+
 func (parser *PacketParser) Encode() []byte {
 	var msg []byte
-	v := parser.packet.typeMessage
-	b := make([]byte, 4)
+	v := len(parser.packet.data)
+	v1 := parser.packet.typeMessage
+	b := make([]byte, 8)
 	b[0] = byte(v) & 0xff
 	b[1] = byte(v>>8) & 0xff
 	b[2] = byte(v>>8) & 0xff
 	b[3] = byte(v>>24) & 0xff
+	b[4] = byte(v1) & 0xff
+	b[5] = byte(v1>>8) & 0xff
+	b[6] = byte(v1>>8) & 0xff
+	b[7] = byte(v1>>24) & 0xff
 	msg = append(msg, b...)
 	msg = append(msg, parser.packet.data...)
 	return msg
