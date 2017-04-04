@@ -47,6 +47,8 @@ func main() {
 			}
 		}
 	}
+	exitChannel := make(chan int)
+	<-exitChannel
 }
 
 func handleConnection(conn net.Conn, messages chan Protocol.Packet) {
