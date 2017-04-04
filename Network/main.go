@@ -1,18 +1,16 @@
 package main
 
-import (
-	"Learn/Network/Protocol"
-	"fmt"
-	"io"
-	"net"
-	"os"
-)
+import network "Learn/Network/Network"
 
-var (
-	LENGTH_HEADER      int = 4
-	LENGTH_TYPE_PACKET int = 4
-)
+func main() {
+	exitChan := make(chan int)
+	server := network.TCPServer{}
+	server.StartServer(8080, exitChan)
+	defer server.Destroy()
+	<-exitChan
+}
 
+/*
 func main() {
 
 	messages := make(chan Protocol.Packet)
@@ -120,3 +118,4 @@ func checkError(err error) {
 func byteToInt(b []byte) int {
 	return int(int(b[0]) + int(b[1])<<8 + int(b[2])<<16 + int(b[3])<<24)
 }
+*/

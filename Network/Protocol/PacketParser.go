@@ -44,8 +44,9 @@ func (parser *PacketParser) Prepare(pid int) {
 	parser.offset = 0
 }
 func (parser *PacketParser) ReadByte() byte {
+	ret := parser.packet.Data[parser.offset]
 	parser.offset++
-	return parser.packet.Data[parser.offset]
+	return ret
 }
 
 func (parser *PacketParser) WriteByte(b byte) {
@@ -55,7 +56,7 @@ func (parser *PacketParser) WriteByte(b byte) {
 
 func (parser *PacketParser) ReadBool() bool {
 	parser.offset++
-	if parser.packet.Data[parser.offset] == 0 {
+	if parser.packet.Data[parser.offset-1] == 0 {
 		return false
 	} else {
 		return true

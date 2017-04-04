@@ -10,34 +10,36 @@ type TCPServer struct {
 	listener         net.Listener
 	agents           map[int]Agent
 	exitChanel       chan int
-	broadcastChannel chan string
+	broadcastChannel chan []byte
 	currMaxSessionID int
 }
 
-func (server *TCPServer) startServer(port int, exitChannel chan int) {
+func (server *TCPServer) StartServer(port int, exitChannel chan int) {
+
+	server.agents = make(map[int]Agent)
 	server.exitChanel = exitChannel
-	addStr := ":" + string(port)
-	addr, err := net.ResolveTCPAddr("tcp4", addStr)
+	server.currMaxSessionID = 0
+	addr, err := net.ResolveTCPAddr("tcp4", ":8080")
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Println("Server run on port: ", port)
+
 	server.listener, err = net.ListenTCP("tcp", addr)
 	defer server.listener.Close()
 
-	go func() {
-		for {
-			conn, err := server.listener.Accept()
-			if err != nil {
-				fmt.Println("cannot resolve client")
-				continue
-			}
-			sessionID := server.CreateNextSessionID()
-			agent := Agent{}
-			server.agents[sessionID] = agent
-			go agent.Start(conn, sessionID)
-
+	for {
+		conn, err := server.listener.Accept()
+		if err != nil {
+			fmt.Println("cannot resolve client")
+			continue
 		}
-	}()
+		sessionID := server.CreateNextSessionID()
+		agent := Agent{}
+		server.agents[sessionID] = agent
+		go agent.Start(*server, conn, sessionID)
+
+	}
 
 }
 
@@ -49,7 +51,24 @@ func (server *TCPServer) Destroy() {
 	}
 }
 
+func (server *TCPServer) CloseConnection(sessionID int) {
+	delete(server.agents, sessionID)
+}
+
 func (server *TCPServer) CreateNextSessionID() int {
 	server.currMaxSessionID++
 	return server.currMaxSessionID
+}
+
+func (server *TCPServer) ListenBroadcastChanne() {
+	for {
+		select {
+		case p := <-server.broadcastChannel:
+			{
+				for _, v := range server.agents {
+					v.conn.Write(p)
+				}
+			}
+		}
+	}
 }
