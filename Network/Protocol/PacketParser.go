@@ -189,7 +189,7 @@ func (parser *PacketParser) WriteFloat32(t float32) {
 }
 
 func (parser *PacketParser) ReadFloat32() float32 {
-	b := parser.packet.Data[parser.offset : parser.offset+8]
+	b := parser.packet.Data[parser.offset : parser.offset+4]
 	parser.offset += 4
 	v := uint32(uint32(b[0]) + uint32(b[1])<<8 + uint32(b[2])<<16 + uint32(b[3])<<24)
 	return math.Float32frombits(v)

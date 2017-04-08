@@ -41,7 +41,7 @@ func (agent *Agent) listen() {
 				fmt.Println("eof 1, may be client close")
 				return
 			} else {
-				fmt.Println(os.Stderr, "Fatal error: ", err.Error())
+				fmt.Fprintln(os.Stderr, "Fatal error: ", err.Error())
 				return
 			}
 
@@ -56,7 +56,7 @@ func (agent *Agent) listen() {
 				fmt.Println("eof, may be client close")
 				return
 			} else {
-				fmt.Println(os.Stderr, "Fatal error: ", err.Error())
+				fmt.Fprintln(os.Stderr, "Fatal error: ", err.Error())
 				return
 			}
 		}
@@ -71,10 +71,10 @@ func (agent *Agent) listen() {
 
 			if err != nil {
 				if err == io.EOF && reqLen < length {
-					fmt.Println(os.Stderr, "Fatal error - len: -:  ", reqLen, err.Error())
+					fmt.Fprintf(os.Stderr, "Fatal error - len: -:  ", reqLen, err.Error())
 					return
 				} else {
-					fmt.Println(os.Stderr, "Fatal error: ", err.Error())
+					fmt.Fprintln(os.Stderr, "Fatal error: ", err.Error())
 					return
 				}
 
@@ -82,15 +82,10 @@ func (agent *Agent) listen() {
 		}
 		p := Protocol.Packet{Data: buf, PID: pid}
 
-		agent.resolvePackage(p)
-	}
-}
-
-func (agent *Agent) resolvePackage(p Protocol.Packet) {
-	switch p.PID {
-	case Protocol.PK_LOGIN:
-		{
+		switch p.PID {
+		case Protocol.PK_LOGIN:
 			{
+
 				parser := Protocol.PacketParser{}
 				parser.DecodePacket(&p)
 				msg := parser.ReadString()
@@ -98,31 +93,44 @@ func (agent *Agent) resolvePackage(p Protocol.Packet) {
 				fmt.Printf("%d: %s\n", agent.sessionID, msg)
 				pw := Protocol.PacketParser{}
 				pw.Prepare(Protocol.PK_LOGIN_SUCCESS)
-				pw.WriteInt32(agent.sessionID)
 				// write user data
+				pw.WriteInt32(agent.sessionID)
+				pw.WriteFloat32(0)
+				pw.WriteFloat32(0)
 
 				agent.conn.Write(pw.Encode())
+			}
+		case Protocol.PK_LOGOUT:
+			{
+				pw := Protocol.PacketParser{}
+				pw.Prepare(Protocol.PK_LOGOUT)
+				fmt.Printf("User %d send exit message\n", agent.sessionID)
+				agent.conn.Write(pw.Encode())
+				return
+
+			}
+		case Protocol.PK_POS_PLAYER:
+			{
+				parser := Protocol.PacketParser{}
+				parser.DecodePacket(&p)
+				x := parser.ReadFloat32()
+				y := parser.ReadFloat32()
+				fmt.Printf("%d user move to: %2ff  - %2f\n", agent.sessionID, x, y)
+				pw := Protocol.PacketParser{}
+				pw.Prepare(Protocol.PK_POS_PLAYER)
+				pw.WriteInt32(agent.sessionID)
+				pw.WriteFloat32(x)
+				pw.WriteFloat32(y)
+				agent.server.broadcastChannel <- pw.Encode()
 
 			}
 		}
-	case Protocol.PK_LOGOUT:
-		{
+	}
+}
 
-		}
-	case Protocol.PK_POS_PLAYER:
-		{
-			parser := Protocol.PacketParser{}
-			parser.DecodePacket(&p)
-			x := parser.ReadFloat32()
-			y := parser.ReadFloat32()
-			pw := Protocol.PacketParser{}
-			pw.WriteInt32(agent.sessionID)
-			pw.WriteFloat32(x)
-			pw.WriteFloat32(y)
-			pw.Prepare(Protocol.PK_POS_PLAYER)
-			agent.server.broadcastChannel <- pw.Encode()
-
-		}
+func (agent *Agent) SendMessage(b []byte) {
+	if agent.isConnecting {
+		agent.conn.Write(b)
 	}
 
 }
